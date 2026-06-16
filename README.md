@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🗺️ Gezi App - Tur Planlama Uygulaması
 
-## Getting Started
+Gezi App, kullanıcıların kişiselleştirilmiş tur rotaları oluşturabildiği, yerleri keşfedebildiği ve diğer gezginlerle paylaşabildiği bir tur planlama platformudur.
 
-First, run the development server:
+> ⚠️ **Proje Durumu**: Geliştirme aşamasında (v0.1.0) - Daha fazla özellik eklenecektir
 
+## ✨ Özellikler
+
+- 🔐 **Kullanıcı Yönetimi**: Supabase entegrasyonu ile güvenli oturum açma/çıkma
+- 🗺️ **Rota Oluşturma**: Kişiselleştirilmiş tur rotaları oluşturma
+- 📍 **Yerler Keşfi**: İlgilendiğiniz yerleri bulma ve filtreleme
+- ❤️ **Favoriler**: Rotaları ve yerleri favorilerinize ekleme
+- 👤 **Profil Yönetimi**: Kişisel profil oluşturma ve düzenleme
+- 📱 **Responsive Tasarım**: Tailwind CSS ile modern UI
+
+## 🛠️ Teknoloji Stack
+
+- **Framework**: [Next.js 16](https://nextjs.org) - React 19 ile
+- **Veritabanı & Auth**: [Supabase](https://supabase.com)
+- **Styling**: [Tailwind CSS 4](https://tailwindcss.com)
+- **Icons**: [Tabler Icons](https://tabler-icons.io)
+- **Language**: TypeScript
+- **Linting**: ESLint
+
+## 📦 Kurulum
+
+### Gereksinimler
+- Node.js 18+ 
+- npm veya yarn
+
+### Adımlar
+
+1. **Repository'yi klonlayın**
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repo-url>
+cd gezi-app
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Bağımlılıkları yükleyin**
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Supabase ortam değişkenlerini ayarlayın**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+`.env.local` dosyasını oluşturun:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-## Learn More
+4. **Geliştirme sunucusunu başlatın**
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+[http://localhost:3000](http://localhost:3000) adresinde uygulamayı açın.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 📁 Proje Yapısı
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+src/
+├── app/
+│   ├── page.tsx              # Ana sayfa
+│   ├── giris/                # Giriş sayfası
+│   ├── profil/               # Profil sayfası
+│   │   ├── [kullanici]/      # Dinamik kullanıcı profili
+│   │   └── duzenle/          # Profil düzenleme
+│   ├── rota-olustur/         # Rota oluşturma sayfası
+│   ├── yerler/               # Yerler sayfası
+│   ├── api/                  # API rotaları
+│   │   └── rota/olustur/     # Rota oluşturma API'si
+│   └── auth/                 # Kimlik doğrulama
+├── lib/
+│   └── supabase/
+│       ├── client.ts         # Supabase istemci (client-side)
+│       └── server.ts         # Supabase sunucu (server-side)
+└── middleware.ts             # NextAuth middleware
 
-## Deploy on Vercel
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🚀 Komutlar
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run dev      # Geliştirme sunucusunu başlat (localhost:3000)
+npm run build    # Üretim derlemesi yap
+npm start        # Üretim sunucusunu başlat
+npm run lint     # ESLint kodunu kontrol et
+```
+
+## 🔄 API Endpoints
+
+- `POST /api/rota/olustur` - Yeni rota oluşturma
+
+## 📝 Planlanan Özellikler
+
+- [ ] Rota detay ve düzenleme
+- [ ] Yorum ve değerlendirme sistemi
+- [ ] Gelişmiş harita entegrasyonu
+- [ ] Paylaşım ve davet sistemi
+- [ ] Bildirim sistemi
+- [ ] Mobil uygulama
+
+## 🤝 Katkıda Bulunma
+
+Bu proje halen geliştirme aşamasındadır. Geliştirmeleri sırasında düşünceleriniz ve tavsiyeleri değerlidir.
+
+## 📄 Lisans
+
+MIT
