@@ -7,7 +7,7 @@ Gezi App, kullanıcıların kişiselleştirilmiş tur rotaları oluşturabildiğ
 ## ✨ Özellikler
 
 - 🔐 **Kullanıcı Yönetimi**: Supabase entegrasyonu ile güvenli oturum açma/çıkma
-- 🗺️ **Rota Oluşturma**: Seçilen semt, süre ve ilgi alanlarına göre mekanlar arası mesafeyi hesaba katan rota oluşturma
+- 🗺️ **Rota Oluşturma**: Seçilen semt, saat aralığı ve ilgi alanlarına göre LLM (Llama 3.3 70B, Groq API) ile kişiselleştirilmiş rota; mekanlar veritabanından filtrelenir ve öncelikli yere uzaklığa göre sıralanır
 - 📍 **Yerler Keşfi**: İlgilendiğiniz yerleri bulma ve filtreleme
 - ✅ **Gezilen / Gidilecek Listeleri**: Mekanları gezildi veya gidilecek olarak işaretleme
 - 👤 **Profil Yönetimi**: Kişisel profil oluşturma ve düzenleme
@@ -17,6 +17,7 @@ Gezi App, kullanıcıların kişiselleştirilmiş tur rotaları oluşturabildiğ
 
 - **Framework**: [Next.js 16](https://nextjs.org) - React 19 ile
 - **Veritabanı & Auth**: [Supabase](https://supabase.com)
+- **Rota Üretimi**: Groq API (Llama 3.3 70B)
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com)
 - **Icons**: [Tabler Icons](https://tabler-icons.io)
 - **Language**: TypeScript
@@ -41,12 +42,13 @@ cd gezi-app
 npm install
 ```
 
-3. **Supabase ortam değişkenlerini ayarlayın**
+3. **Ortam değişkenlerini ayarlayın**
 
 `.env.local` dosyasını oluşturun:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+GROQ_API_KEY=your_groq_api_key   # rota oluşturma için (console.groq.com)
 ```
 
 4. **Veritabanını hazırlayın**
