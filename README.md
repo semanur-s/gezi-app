@@ -1,6 +1,6 @@
 # 🗺️ Gezi App - Tur Planlama Uygulaması
 
-Gezi App, kullanıcıların kişiselleştirilmiş tur rotaları oluşturabildiği, yerleri keşfedebildiği ve diğer gezginlerle paylaşabildiği bir tur planlama platformudur.
+Gezi App, kullanıcıların kişiselleştirilmiş tur rotaları oluşturabildiği, yerleri keşfedebildiği ve gezdiği yerleri takip edebildiği bir tur planlama platformudur.
 
 > ⚠️ **Proje Durumu**: Geliştirme aşamasında (v0.1.0) - Daha fazla özellik eklenecektir
 
@@ -120,6 +120,7 @@ npm run lint     # ESLint kodunu kontrol et
 - [ ] Rotaları kaydetme (favoriler)
 - [ ] Davet sistemi
 - [ ] Bildirim sistemi
+- [ ] Favori rotalar
 - [ ] Mobil uygulama
 
 ## 🤝 Katkıda Bulunma
