@@ -159,6 +159,12 @@ export default function Home() {
   const [username, setUsername] = useState<string | null>(null);
   const [scrollY, setScrollY] = useState(0);
   const [slayt, setSlayt] = useState(0);
+  const [bilgiMesaji, setBilgiMesaji] = useState<string | null>(null);
+
+  function gelistirmeAsamasinda() {
+    setBilgiMesaji("Bu özellik geliştirme aşamasında");
+    setTimeout(() => setBilgiMesaji(null), 2500);
+  }
 
   useScrollReveal([gercekler.length]);
 
@@ -567,7 +573,7 @@ export default function Home() {
                         {post.begendim ? <IconHeartFilled size={16} /> : <IconHeart size={16} />}
                         {post.begeniSayisi}
                       </button>
-                      <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-coral transition-colors">
+                      <button onClick={gelistirmeAsamasinda} className="flex items-center gap-1 text-xs text-gray-400 hover:text-coral transition-colors">
                         <IconBookmark size={16} />
                         Kaydet
                       </button>
@@ -636,11 +642,11 @@ export default function Home() {
                       {post.liked ? <IconHeartFilled size={16} /> : <IconHeart size={16} />}
                       {post.likes}
                     </button>
-                    <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-coral transition-colors">
+                    <button onClick={gelistirmeAsamasinda} className="flex items-center gap-1 text-xs text-gray-400 hover:text-coral transition-colors">
                       <IconMessageCircle size={16} />
                       {post.comments} yorum
                     </button>
-                    <button className="flex items-center gap-1 text-xs text-gray-400 hover:text-coral transition-colors">
+                    <button onClick={gelistirmeAsamasinda} className="flex items-center gap-1 text-xs text-gray-400 hover:text-coral transition-colors">
                       <IconBookmark size={16} />
                       Kaydet
                     </button>
@@ -651,6 +657,12 @@ export default function Home() {
           </section>
           </div>
         </div>
+
+        {bilgiMesaji && (
+          <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-navy-deep/95 px-4 py-2 text-sm text-white shadow-lg ring-1 ring-white/10">
+            {bilgiMesaji}
+          </div>
+        )}
     </div>
   );
 }

@@ -515,8 +515,7 @@ export default function ProfilDuzenlePage() {
             </div>
             <p className="text-xs text-gray-500 leading-relaxed mb-4">
               Hesap silme işlemi geri alınamaz ve tüm rotalarını, puanlarını kalıcı olarak kaldırır.
-              Güvenliğin için bu işlem şu anda destek ekibimiz üzerinden yapılıyor —
-              <span className="font-medium text-gray-700"> destek@gezim.app</span> adresine yazman yeterli.
+              Hesap silme özelliği şu anda geliştirme aşamasında.
             </p>
             <button
               onClick={() => setSilOnayAcik(false)}

@@ -13,7 +13,7 @@ Gezi App, kullanıcıların kişiselleştirilmiş tur rotaları oluşturabildiğ
 - 🧠 **Öğrenen Kişiselleştirme**: Gezi sonu anketi ile ilgi profili birikir, sonraki rotalara yansır
 - ✨ **Oyunsu Arayüz**: Tıklamalarda uçan övgü yazıları, sahneli rota yükleme animasyonu, kademeli giriş efektleri
 - 🖼️ **Otomatik Görseller**: Mekan fotoğrafları Türkçe Wikipedia'dan dinamik çekilir
-- 🗺️ **AI ile Rota Oluşturma**: Seçilen semt, saat aralığı ve ilgi alanlarına göre LLM (Llama 3.3 70B, Groq API) ile rota; mekanlar önce veritabanında filtrelenir, öncelikli yere uzaklığa göre sıralanır
+- 🗺️ **AI ile Rota Oluşturma**: Seçilen semt, saat aralığı ve ilgi alanlarına göre LLM (gpt-oss-120b, Groq API) ile rota; mekanlar önce veritabanında filtrelenir, öncelikli yere uzaklığa göre sıralanır
 - 📍 **Yerler Keşfi**: İlgilendiğiniz yerleri bulma ve filtreleme
 - ✅ **Gezilen / Gidilecek Listeleri**: Mekanları işaretleyip sonraki rotaları buna göre şekillendirme
 - 🧭 **İnsan Rehberler**: Rehber başvurusu (`/rehber-ol`) ve rehber listesi (`/rehberler`)
@@ -24,7 +24,7 @@ Gezi App, kullanıcıların kişiselleştirilmiş tur rotaları oluşturabildiğ
 
 - **Framework**: [Next.js 16](https://nextjs.org) - React 19 ile
 - **Veritabanı & Auth**: [Supabase](https://supabase.com)
-- **Rota Üretimi**: Groq API (Llama 3.3 70B)
+- **Rota Üretimi**: Groq API (gpt-oss-120b)
 - **Hava Durumu**: Open-Meteo
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com)
 - **Icons**: [Tabler Icons](https://tabler-icons.io)
