@@ -13,29 +13,115 @@ function mesafe(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+// WMO hava kodu → Türkçe açıklama
+function havaKoduAciklama(kod: number): { aciklama: string; emoji: string; kotuHava: boolean } {
+  if (kod === 0) return { aciklama: "açık ve güneşli", emoji: "☀️", kotuHava: false };
+  if (kod <= 2) return { aciklama: "az bulutlu", emoji: "🌤️", kotuHava: false };
+  if (kod === 3) return { aciklama: "kapalı", emoji: "☁️", kotuHava: false };
+  if (kod <= 48) return { aciklama: "sisli", emoji: "🌫️", kotuHava: false };
+  if (kod <= 57) return { aciklama: "çiseleyen yağmur", emoji: "🌦️", kotuHava: true };
+  if (kod <= 67) return { aciklama: "yağmurlu", emoji: "🌧️", kotuHava: true };
+  if (kod <= 77) return { aciklama: "karlı", emoji: "❄️", kotuHava: true };
+  if (kod <= 82) return { aciklama: "sağanak yağışlı", emoji: "🌧️", kotuHava: true };
+  if (kod <= 86) return { aciklama: "kar sağanağı", emoji: "🌨️", kotuHava: true };
+  return { aciklama: "fırtınalı", emoji: "⛈️", kotuHava: true };
+}
+
+// Open-Meteo (ücretsiz, anahtar gerektirmez) — İstanbul için günlük tahmin
+async function havaDurumu(tarih: string) {
+  if (!tarih) return null;
+  try {
+    const gun = new Date(tarih + "T00:00:00");
+    const bugun = new Date();
+    bugun.setHours(0, 0, 0, 0);
+    const farkGun = Math.round((gun.getTime() - bugun.getTime()) / 86400000);
+    if (isNaN(farkGun) || farkGun < 0 || farkGun > 15) return null;
+
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=41.01&longitude=28.97` +
+      `&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max` +
+      `&timezone=Europe%2FIstanbul&start_date=${tarih}&end_date=${tarih}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    if (!res.ok) return null;
+
+    const d = await res.json();
+    const kod = d.daily?.weathercode?.[0];
+    if (kod === undefined || kod === null) return null;
+
+    const { aciklama, emoji, kotuHava } = havaKoduAciklama(kod);
+    const yagisOlasilik = d.daily.precipitation_probability_max?.[0] ?? 0;
+    return {
+      aciklama,
+      emoji,
+      sicaklikMax: Math.round(d.daily.temperature_2m_max?.[0] ?? 0),
+      sicaklikMin: Math.round(d.daily.temperature_2m_min?.[0] ?? 0),
+      yagisOlasilik,
+      icMekanOnerilir: kotuHava || yagisOlasilik >= 50,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Basit bellek-içi sayaç (10 dk pencere). Sunucusuz ortamda örnek başına çalışır;
+// trafik büyürse Upstash Redis gibi paylaşımlı bir depoya taşınmalı.
+const HIZ_PENCERESI_MS = 10 * 60 * 1000;
+const hizSayaclari = new Map<string, { sayi: number; bitis: number }>();
+
+function hizSiniriGecti(anahtar: string, limit: number) {
+  const simdi = Date.now();
+  if (hizSayaclari.size > 5000) {
+    for (const [k, v] of hizSayaclari) if (v.bitis < simdi) hizSayaclari.delete(k);
+  }
+  const kayit = hizSayaclari.get(anahtar);
+  if (!kayit || kayit.bitis < simdi) {
+    hizSayaclari.set(anahtar, { sayi: 1, bitis: simdi + HIZ_PENCERESI_MS });
+    return true;
+  }
+  kayit.sayi++;
+  return kayit.sayi <= limit;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { bolgeler, bolgeAdi, sure, tarih, gunAdi, ilgiler, vibe, gezilenleriDahilEt, oncelikliYer, asamasi, secimContext } =
       await req.json();
 
     if (!bolgeler?.length || !sure) {
-      return NextResponse.json({ error: "Semt ve sure gerekli" }, { status: 400 });
+      return NextResponse.json({ error: "Semt ve süre gerekli" }, { status: 400 });
     }
 
     const supabase = await createClient();
 
     let gezilenYerler: string[] = [];
     let gidilecekYerler: string[] = [];
+    let favoriEtiketler: string[] = [];
     const { data: { user } } = await supabase.auth.getUser();
+
+    // AI çağrıları ücretli/kotalı olduğu için kötüye kullanıma karşı hız sınırı
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0].trim() || "bilinmiyor";
+    if (!hizSiniriGecti(user ? `u:${user.id}` : `ip:${ip}`, user ? 20 : 5)) {
+      return NextResponse.json(
+        { error: "Çok fazla rota isteği gönderdin, birkaç dakika sonra tekrar dene." },
+        { status: 429 }
+      );
+    }
+
     if (user) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("gezilen_yerler, gidilecek_yerler")
+        .select("gezilen_yerler, gidilecek_yerler, ilgi_puanlari")
         .eq("id", user.id)
         .single();
       if (profile) {
         gezilenYerler = profile.gezilen_yerler || [];
         gidilecekYerler = profile.gidilecek_yerler || [];
+        // Gezi sonu anketlerinden biriken ilgi puanlarının en yüksek 3 etiketi
+        const ilgiPuanlari: Record<string, number> = profile.ilgi_puanlari || {};
+        favoriEtiketler = Object.entries(ilgiPuanlari)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 3)
+          .map(([etiket]) => etiket);
       }
     }
 
@@ -45,7 +131,7 @@ export async function POST(req: NextRequest) {
       .limit(100);
 
     if (dbError || !tumPlaces || tumPlaces.length === 0) {
-      return NextResponse.json({ error: "Mekan bulunamadi" }, { status: 404 });
+      return NextResponse.json({ error: "Mekân bulunamadı" }, { status: 404 });
     }
 
     let bolgePlaces = tumPlaces.filter((p) => bolgeler.includes(p.district));
@@ -126,10 +212,11 @@ JSON formati:
         method: "POST",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
         body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
+          model: "openai/gpt-oss-120b",
           messages: [{ role: "user", content: altPrompt }],
           temperature: 0.5,
-          max_tokens: 500,
+          max_tokens: 2500,
+          reasoning_effort: "low",
         }),
       });
 
@@ -144,6 +231,16 @@ JSON formati:
         return NextResponse.json({ sorular: [] });
       }
     }
+
+    // Gezi günü hava durumu (tahmin aralığı dışındaysa null)
+    const hava = await havaDurumu(tarih);
+    const havaLabel = hava
+      ? `\nHava durumu: ${hava.aciklama}, ${hava.sicaklikMin}-${hava.sicaklikMax}°C, yagis olasiligi %${hava.yagisOlasilik}.${
+          hava.icMekanOnerilir
+            ? " HAVA KOTU: rotayi IC MEKAN agirlikli kur (muze, carsi, kapali mekan); acik hava duraklari kisa tut, duraklar arasi yuruyusleri azalt."
+            : " Hava uygun: acik hava mekanlari (park, sahil, sokak gezisi) rahatca kullanilabilir."
+        }`
+      : "";
 
     // Toplam dakika hesapla
     let toplamDkStr = "";
@@ -163,9 +260,9 @@ JSON formati:
 
 Zaman araligi: ${sure}
 Toplam sure: ${toplamDkStr} — TUM ZAMANI KULLAN, kisalt
-Gezi tarihi: ${gunAdi || tarih || "belirtilmedi"}
+Gezi tarihi: ${gunAdi || tarih || "belirtilmedi"}${havaLabel}
 Semtler: ${bolgeAdi || bolgeler.join(", ")}
-Kullanicinin vibe tercihleri: ${vibe || "genel"}
+Kullanicinin vibe tercihleri: ${vibe || "genel"}${favoriEtiketler.length > 0 ? `\nKullanicinin gecmis gezilerinden ogrenilen favori temalari: ${favoriEtiketler.join(", ")} — mekan secerken bu temalara agirlik ver.` : ""}
 ${gidilecekLabel ? `Oncelikli gidilecek yerler: ${gidilecekLabel}` : ""}${gezilenLabel}
 ${secimContext ? `Kullanicinin tercih ettigi mekanlar (MUTLAKA rotaya dahil et): ${secimContext}` : ""}
 
@@ -212,7 +309,7 @@ JSON formati:
 
     const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      return NextResponse.json({ error: "API yapilandirma hatasi" }, { status: 500 });
+      return NextResponse.json({ error: "API yapılandırma hatası" }, { status: 500 });
     }
 
     const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -222,32 +319,33 @@ JSON formati:
         "Authorization": `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
-        max_tokens: 1500,
+        max_tokens: 6000,
+        reasoning_effort: "low",
       }),
     });
 
     if (!groqRes.ok) {
       const errData = await groqRes.json();
       console.error("Groq hatasi:", JSON.stringify(errData));
-      return NextResponse.json({ error: "AI servisi su an kullanilamiyor" }, { status: 503 });
+      return NextResponse.json({ error: "AI servisi şu an kullanılamıyor" }, { status: 503 });
     }
 
     const groqData = await groqRes.json();
     const text = groqData.choices?.[0]?.message?.content;
 
     if (!text) {
-      return NextResponse.json({ error: "Rota olusturulamadi" }, { status: 500 });
+      return NextResponse.json({ error: "Rota oluşturulamadı" }, { status: 500 });
     }
 
     const jsonText = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
     const rota = JSON.parse(jsonText);
 
-    return NextResponse.json(rota);
+    return NextResponse.json({ ...rota, hava });
   } catch (err) {
     console.error("Rota olusturma hatasi:", err);
-    return NextResponse.json({ error: "Beklenmedik bir hata olustu" }, { status: 500 });
+    return NextResponse.json({ error: "Beklenmedik bir hata oluştu" }, { status: 500 });
   }
 }

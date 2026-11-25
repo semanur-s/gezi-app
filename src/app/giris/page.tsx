@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { IconMap2, IconBrandGoogle, IconMail, IconLock, IconEye, IconEyeOff } from "@tabler/icons-react";
+import { IconMap2, IconBrandGoogle, IconMail, IconLock, IconEye, IconEyeOff, IconAt } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 
 export default function GirisPage() {
@@ -11,6 +11,7 @@ export default function GirisPage() {
 
   const [mod, setMod] = useState<"giris" | "kayit">("giris");
   const [email, setEmail] = useState("");
+  const [kullaniciAdi, setKullaniciAdi] = useState("");
   const [sifre, setSifre] = useState("");
   const [sifreGoster, setSifreGoster] = useState(false);
   const [yukleniyor, setYukleniyor] = useState(false);
@@ -42,7 +43,27 @@ export default function GirisPage() {
         router.refresh();
       }
     } else {
-      const { error } = await supabase.auth.signUp({ email, password: sifre });
+      const username = kullaniciAdi.trim().toLowerCase();
+      if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+        setHata("Kullanıcı adı 3-20 karakter olmalı; küçük harf, rakam ve _ kullanılabilir.");
+        setYukleniyor(false);
+        return;
+      }
+      const { data: existing } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("username", username)
+        .maybeSingle();
+      if (existing) {
+        setHata("Bu kullanıcı adı zaten alınmış, başka bir tane dene.");
+        setYukleniyor(false);
+        return;
+      }
+      const { error } = await supabase.auth.signUp({
+        email,
+        password: sifre,
+        options: { data: { username } },
+      });
       if (error) {
         setHata("Kayıt başarısız: " + error.message);
       } else {
@@ -54,17 +75,22 @@ export default function GirisPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#FDF0E8] flex items-center justify-center px-5">
-      <div className="bg-white rounded-3xl shadow-sm border border-[#E8B48A] p-8 w-full max-w-sm">
+    <div className="relative min-h-screen bg-navy-deep flex items-center justify-center px-5 overflow-hidden">
+      {/* Yüzen ışıklar — hero ile aynı canlı dil */}
+      <div className="blob blob-1 w-72 h-72 -top-16 -left-20" style={{ background: "#f4512c" }} />
+      <div className="blob blob-2 w-80 h-80 bottom-0 -right-24" style={{ background: "#3c6a9e" }} />
+
+      <div className="relative anim-pop-in bg-white rounded-3xl shadow-2xl p-8 w-full max-w-sm">
         {/* Logo */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-9 h-9 rounded-xl bg-[#C2622A] flex items-center justify-center">
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <div className="w-9 h-9 rounded-xl bg-navy flex items-center justify-center">
             <IconMap2 size={20} color="white" />
           </div>
-          <span className="text-lg font-medium text-gray-900">
-            gez<span className="text-[#C2622A]">im</span>
+          <span className="font-brand text-2xl text-navy">
+            Gezi <span className="text-coral">App</span>
           </span>
         </div>
+        <p className="font-flourish text-2xl text-coral text-center mb-6">Tekrar hoş geldin</p>
 
         {/* Tab seçici */}
         <div className="flex bg-gray-100 rounded-full p-1 mb-6">
@@ -89,10 +115,10 @@ export default function GirisPage() {
         {/* Google butonu */}
         <button
           onClick={googleIleGirisYap}
-          className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-full py-3 px-4 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-colors mb-4"
+          className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-full py-3 px-4 text-sm font-medium text-gray-700 hover:border-navy hover:-translate-y-0.5 transition-all mb-4"
         >
           <IconBrandGoogle size={18} />
-          {mod === "giris" ? "Google ile giriş yap" : "Google ile kayıt ol"}
+          {mod === "giris" ? "Google ile Giriş Yap" : "Google ile Kayıt Ol"}
         </button>
 
         {/* Ayraç */}
@@ -104,6 +130,20 @@ export default function GirisPage() {
 
         {/* E-posta formu */}
         <form onSubmit={epostaIleGiris} className="flex flex-col gap-3">
+          {mod === "kayit" && (
+            <div className="relative">
+              <IconAt size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="kullanici_adi"
+                value={kullaniciAdi}
+                onChange={(e) => setKullaniciAdi(e.target.value.toLowerCase())}
+                maxLength={20}
+                required
+                className="w-full pl-10 pr-4 py-3 rounded-full border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-coral transition-colors"
+              />
+            </div>
+          )}
           <div className="relative">
             <IconMail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -112,7 +152,7 @@ export default function GirisPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full pl-10 pr-4 py-3 rounded-full border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#C2622A] transition-colors"
+              className="w-full pl-10 pr-4 py-3 rounded-full border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-coral transition-colors"
             />
           </div>
           <div className="relative">
@@ -123,7 +163,7 @@ export default function GirisPage() {
               value={sifre}
               onChange={(e) => setSifre(e.target.value)}
               required
-              className="w-full pl-10 pr-10 py-3 rounded-full border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#C2622A] transition-colors"
+              className="w-full pl-10 pr-10 py-3 rounded-full border border-gray-200 text-sm text-gray-900 placeholder:text-gray-400 outline-none focus:border-coral transition-colors"
             />
             <button
               type="button"
@@ -140,15 +180,15 @@ export default function GirisPage() {
           <button
             type="submit"
             disabled={yukleniyor}
-            className="w-full bg-[#C2622A] hover:bg-[#a8521f] disabled:opacity-60 text-white text-sm font-medium py-3 rounded-full transition-colors mt-1"
+            className="w-full bg-coral hover:bg-coral-dark disabled:opacity-60 text-white text-sm font-medium py-3 rounded-full transition-colors mt-1"
           >
-            {yukleniyor ? "..." : mod === "giris" ? "Giriş yap" : "Kayıt ol"}
+            {yukleniyor ? "..." : mod === "giris" ? "Giriş Yap" : "Kayıt Ol"}
           </button>
         </form>
 
         <p className="text-xs text-gray-400 mt-5 text-center leading-relaxed">
           Devam ederek{" "}
-          <span className="text-[#C2622A]">kullanım koşullarını</span>{" "}
+          <span className="text-coral">kullanım koşullarını</span>{" "}
           kabul etmiş olursun.
         </p>
       </div>

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { egimVer, egimSifirla } from "@/lib/etkilesim";
 import type { User } from "@supabase/supabase-js";
 import {
   IconArrowLeft,
@@ -39,11 +40,11 @@ const KATEGORI_RENK: Record<string, string> = {
   ada: "bg-teal-50 text-teal-700 border-teal-200",
 };
 
-export default function YerlerPage() {
+function YerlerInner() {
   const router = useRouter();
-  const [aramaMetni, setAramaMetni] = useState("");
+  const searchParams = useSearchParams();
+  const [aramaMetni, setAramaMetni] = useState(searchParams.get("ara") || "");
   const [places, setPlaces] = useState<Place[]>([]);
-  const [filtrelenmis, setFiltrelenmis] = useState<Place[]>([]);
   const [yukleniyor, setYukleniyor] = useState(true);
   const [user, setUser] = useState<User | null>(null);
   const [gezilen, setGezilen] = useState<string[]>([]);
@@ -59,7 +60,6 @@ export default function YerlerPage() {
       ]);
       setUser(user);
       setPlaces(placesData || []);
-      setFiltrelenmis(placesData || []);
 
       if (user) {
         const { data: profile } = await supabase
@@ -77,20 +77,24 @@ export default function YerlerPage() {
     fetchAll();
   }, []);
 
-  const ara = useCallback((metin: string) => {
-    const q = metin.toLowerCase().trim();
-    if (!q) { setFiltrelenmis(places); return; }
-    setFiltrelenmis(
-      places.filter((p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.district.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        p.tags.some((t) => t.toLowerCase().includes(q))
-      )
+  const filtrelenmis = useMemo(() => {
+    const q = aramaMetni.toLowerCase().trim();
+    if (!q) return places;
+    return places.filter((p) =>
+      p.name.toLowerCase().includes(q) ||
+      p.district.toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q) ||
+      p.tags.some((t) => t.toLowerCase().includes(q))
     );
-  }, [places]);
+  }, [places, aramaMetni]);
 
-  useEffect(() => { ara(aramaMetni); }, [aramaMetni, ara]);
+  // URL'deki ?ara= değişirse (ör. başka bir baloncuğa tıklanırsa) arama kutusunu güncelle
+  const urlAra = searchParams.get("ara");
+  const [oncekiUrlAra, setOncekiUrlAra] = useState(urlAra);
+  if (urlAra !== oncekiUrlAra) {
+    setOncekiUrlAra(urlAra);
+    if (urlAra) setAramaMetni(urlAra);
+  }
 
   async function toggleGezilen(placeName: string) {
     if (!user) { router.push("/giris"); return; }
@@ -121,25 +125,26 @@ export default function YerlerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white max-w-lg mx-auto">
+    <div className="min-h-screen bg-navy-tint">
       {/* Topbar */}
-      <header className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur-sm z-10">
-        <Link href="/" className="text-gray-500 hover:text-gray-800 transition-colors">
+      <header className="border-b border-white/10 sticky top-0 bg-navy/90 backdrop-blur-md z-20"><div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-3.5">
+        <Link href="/" className="text-white/70 hover:text-white transition-colors">
           <IconArrowLeft size={20} />
         </Link>
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded-lg bg-[#C2622A] flex items-center justify-center">
+          <div className="w-6 h-6 rounded-lg bg-coral flex items-center justify-center">
             <IconMap2 size={14} color="white" />
           </div>
-          <span className="text-sm font-medium text-gray-900">
-            gez<span className="text-[#C2622A]">im</span>
+          <span className="font-brand text-base text-white">
+            Gezi <span className="text-coral">App</span>
           </span>
         </div>
         <div className="w-5" />
-      </header>
+      </div></header>
 
       {/* Arama */}
-      <div className="px-5 pt-5 pb-3 sticky top-[57px] bg-white z-10">
+      <div className="sticky top-[57px] bg-navy-tint z-10">
+        <div className="mx-auto w-full max-w-6xl px-5 pt-5 pb-3">
         <div className="relative">
           <IconSearch size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
@@ -148,37 +153,44 @@ export default function YerlerPage() {
             onChange={(e) => setAramaMetni(e.target.value)}
             placeholder="Galata, müze, Kadıköy..."
             autoFocus
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-full text-sm placeholder-gray-400 focus:outline-none focus:border-[#C2622A] transition-colors"
+            className="w-full pl-9 pr-4 py-2.5 border border-navy-line bg-white rounded-full text-sm placeholder-gray-400 focus:outline-none focus:border-coral transition-colors"
           />
         </div>
         <div className="flex items-center justify-between mt-2.5">
           <p className="text-[11px] text-gray-400">{filtrelenmis.length} yer</p>
           {!user && (
             <p className="text-[11px] text-gray-400">
-              <Link href="/giris" className="text-[#C2622A]">Giriş yap</Link> → kaydet & rota oluştur
+              <Link href="/giris" className="text-coral">Giriş Yap</Link> → kaydet & rota oluştur
             </p>
           )}
+        </div>
         </div>
       </div>
 
       {/* Liste */}
       {yukleniyor ? (
         <div className="flex items-center justify-center py-20">
-          <div className="w-6 h-6 rounded-full border-2 border-[#C2622A] border-t-transparent animate-spin" />
+          <div className="w-6 h-6 rounded-full border-2 border-coral border-t-transparent animate-spin" />
         </div>
       ) : filtrelenmis.length === 0 ? (
         <div className="text-center py-16">
           <p className="text-sm text-gray-400">Sonuç bulunamadı</p>
         </div>
       ) : (
-        <div className="px-5 pb-10 flex flex-col gap-3 mt-1">
-          {filtrelenmis.map((place) => {
+        <div className="mx-auto w-full max-w-6xl px-5 pb-10 mt-1 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 items-start">
+          {filtrelenmis.map((place, i) => {
             const isGezilen = gezilen.includes(place.name);
             const isGidilecek = gidilecek.includes(place.name);
             const renk = KATEGORI_RENK[place.category] || "bg-gray-50 text-gray-600 border-gray-200";
 
             return (
-              <div key={place.id} className="border border-gray-100 rounded-2xl p-4">
+              <div
+                key={place.id}
+                className="anim-fade-up kart-3d bg-white border border-navy-line/50 rounded-2xl p-4"
+                style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}
+                onMouseMove={egimVer}
+                onMouseLeave={egimSifirla}
+              >
                 {/* Üst satır */}
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex-1">
@@ -210,12 +222,12 @@ export default function YerlerPage() {
                     disabled={islemYapiliyor === place.name + "_gidilecek"}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                       isGidilecek
-                        ? "bg-[#FDF0E8] border-[#C2622A] text-[#C2622A]"
-                        : "border-gray-200 text-gray-500 hover:border-[#C2622A] hover:text-[#C2622A]"
+                        ? "bg-coral-tint border-coral text-coral"
+                        : "border-gray-200 text-gray-500 hover:border-coral hover:text-coral"
                     }`}
                   >
                     {isGidilecek ? <IconBookmarkFilled size={12} /> : <IconBookmark size={12} />}
-                    {isGidilecek ? "Listede" : "Gitmek istiyorum"}
+                    {isGidilecek ? "Listede" : "Gitmek İstiyorum"}
                   </button>
 
                   <button
@@ -233,7 +245,7 @@ export default function YerlerPage() {
 
                   <button
                     onClick={() => rotaOlustur(place.name)}
-                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-[#C2622A] text-white hover:bg-[#a8521f] transition-colors"
+                    className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-coral text-white hover:bg-coral-dark transition-colors"
                   >
                     <IconRoute size={12} />
                     Rota
@@ -245,5 +257,17 @@ export default function YerlerPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function YerlerPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-navy-tint flex items-center justify-center">
+        <div className="w-8 h-8 rounded-full border-2 border-coral border-t-transparent animate-spin" />
+      </div>
+    }>
+      <YerlerInner />
+    </Suspense>
   );
 }
